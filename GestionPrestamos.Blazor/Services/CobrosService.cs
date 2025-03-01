@@ -10,7 +10,7 @@ public class CobrosService(IDbContextFactory<Contexto> DbFactory)
 {
     private async Task<bool> Existe(int cobroId)
     {
-        await using var contexto = await DbFactory.CreateDbContextAsync();
+        await using var contexto= await DbFactory.CreateDbContextAsync();
         return await contexto.Cobros.AnyAsync(c => c.CobroId == cobroId);
     }
 
@@ -25,34 +25,16 @@ public class CobrosService(IDbContextFactory<Contexto> DbFactory)
     private async Task AfectarPrestamos(CobrosDetalle[] detalle, TipoOperacion tipoOperacion)
     {
         await using var contexto = await DbFactory.CreateDbContextAsync();
-        var prestamosVacios = new List<int>();
-        var cuotasSaldadas = new List<int>();
         foreach (var item in detalle)
         {
             var prestamo = await contexto.Prestamos.SingleAsync(p => p.PrestamoId == item.PrestamoId);
-            double leftOver = item.ValorCobrado;
             if (tipoOperacion == TipoOperacion.Resta)
                 prestamo.Balance -= item.ValorCobrado;
             else
                 prestamo.Balance += item.ValorCobrado;
 
-            if (prestamo.Balance == 0)
-            {
-                prestamosVacios.Add(prestamo.PrestamoId);
-                contexto.Prestamos.Remove(prestamo);
-                await contexto.SaveChangesAsync();
-
-            }
-
         }
-        await contexto.SaveChangesAsync();
-        foreach (var prestamoId in prestamosVacios)
-        {
-            await Eliminar(prestamoId);
-        }
-        
     }
-
 
     private async Task<bool> Modificar(Cobros cobro)
     {
