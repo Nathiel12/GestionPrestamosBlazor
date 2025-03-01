@@ -9,6 +9,8 @@
 <PageTitle>Edit</PageTitle>
 <EditForm Model="Cobro" OnValidSubmit="Modificar">
     <DataAnnotationsValidator />
+    <label style="color:red;" hidden="@string.IsNullOrEmpty(ErrorNombre)">@ErrorNombre</label>
+    <label style="color:green;" hidden="@string.IsNullOrEmpty(GuardarExito)">@GuardarExito</label>
 
     <div class="container">
         <div class="card shadow-lg">
@@ -40,9 +42,9 @@
                     <h5>Detalles del Cobro</h5>
 
                     <PrestamoPicker Prestamos="ListaPrestamos"
-                                    PrestamoId="DetalleSeleccionado.PrestamoId"
-                                    Valor="DetalleSeleccionado.ValorCobrado"
-                                    OnPrestamoSelected="HandlePrestamoSelected" />
+                    PrestamoId="DetalleSeleccionado.PrestamoId"
+                    Valor="DetalleSeleccionado.ValorCobrado"
+                    OnPrestamoSelected="HandlePrestamoSelected" />
                     <hr />
                     <table class="table table-light">
                         <thead class="table table-striped">
@@ -59,7 +61,7 @@
                                     <th>@detalle.ValorCobrado</th>
                                     <th>
                                         <button type="button" class="btn btn-outline-danger bi bi-trash"
-                                            @onclick="() => RemoverDetalle(detalle)">
+                                        @onclick="() => RemoverDetalle(detalle)">
                                         </button>
                                     </th>
                                 </tr>
@@ -100,6 +102,8 @@
     public List<Prestamos> ListaPrestamos { get; set; } = [];
 
     public string Mensaje = string.Empty;
+    private string ErrorNombre { get; set; } = string.Empty;
+    private string GuardarExito { get; set; } = string.Empty;
 
     protected override async Task OnInitializedAsync() {
         Cobro = await cobroService.Buscar(CobroId);
@@ -131,11 +135,11 @@
         var paso = await cobroService.Guardar(Cobro);
 
         if (paso) {
-            toastService.ShowSuccess( "Se ha modificado correctamente");
+            GuardarExito = "Se ha modificado correctamente";
             navigationManager.NavigateTo("/Cobro/Index");
         }
         else {
-            toastService.ShowError( "No se ha podido modificar correctamente");
+            ErrorNombre = "No se ha podido modificar correctamente";
         }
     }
 
