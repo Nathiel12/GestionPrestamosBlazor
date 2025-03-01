@@ -63,15 +63,6 @@
     public async Task Eliminar()
     {
         var eliminado = await cobroService.Eliminar(Cobro.CobroId);
-
-        if (eliminado)
-        {
-            toastService.ShowSuccess("Eliminado Correctamente");
-            navigationManager.NavigateTo("/Cobro/Index");
-        }
-        else
-        {
-            toastService.ShowError( "No se ha podido eliminar el cobro");
-        }
+        navigationManager.NavigateTo("/Cobro/Index");
     }
 }
