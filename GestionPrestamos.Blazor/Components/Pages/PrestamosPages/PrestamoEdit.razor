@@ -9,6 +9,8 @@
 <PageTitle>Modificar</PageTitle>
 <EditForm Model="Prestamo" OnValidSubmit="Modificar">
     <DataAnnotationsValidator />
+    <label style="color:red;" hidden="@string.IsNullOrEmpty(ErrorNombre)">@ErrorNombre</label>
+    <label style="color:green;" hidden="@string.IsNullOrEmpty(GuardarExito)">@GuardarExito</label>
     <ValidationSummary />
 
     <div class="container">
@@ -21,12 +23,12 @@
                 @*Deudor*@
                 <div class="mb-3">
                     <label class="form-label"><strong>Deudor</strong></label>
-                        <InputSelect class="form-control" @bind-Value="Prestamo.DeudorId">
-                            <option value="" selected disabled>Elija una opci&oacute;n</option>
-                            @foreach (var deudor in ListaDeudores)
-                            {
-                                <option value="@deudor.DeudorId">@deudor.Nombres</option>
-                            }
+                    <InputSelect class="form-control" @bind-Value="Prestamo.DeudorId">
+                        <option value="" selected disabled>Elija una opci&oacute;n</option>
+                        @foreach (var deudor in ListaDeudores)
+                        {
+                            <option value="@deudor.DeudorId">@deudor.Nombres</option>
+                        }
                     </InputSelect>
                     <ValidationMessage For="(() => Prestamo.Deudor)" />
                 </div>
@@ -42,6 +44,9 @@
                     <InputNumber class="form-control" @bind-Value="Prestamo.Monto"></InputNumber>
                     <ValidationMessage For="(() => Prestamo.Monto)" />
                 </div>
+
+                <CuotaPicker Valor="Prestamo.Monto" CuotasIniciales="ListaPrestamosDetalles" OnCuotasCalculated="HandleCuotasCalculated" />
+
             </div>
 
             @*footer*@
@@ -49,7 +54,7 @@
                 <a href="/Prestamo/Index" class="btn btn-secondary"> 
                     <span class="bi bi-arrow-left"></span> Volver
                 </a>
-                <button type="submit" class="btn btn-primary bi bi-floppy" @onclick="Modificar"> Modificar</button>
+                <button type="submit" class="btn btn-primary bi bi-floppy"> Modificar</button>
                 <button type="button" class="btn btn-danger bi bi-trash" @onclick="Eliminar"> Eliminar</button>
             </div>
         </div>
@@ -63,26 +68,32 @@
     public Prestamos Prestamo { get; set; } = new Prestamos();
     public string Mensaje { get; set; } = string.Empty;
     public List<Deudores> ListaDeudores { get; set; } = new List<Deudores>();
+    public List<PrestamosDetalle> ListaPrestamosDetalles { get; set; } = new List<PrestamosDetalle>();
+    private string ErrorNombre { get; set; } = string.Empty;
+    private string GuardarExito { get; set; } = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
         Prestamo = await prestamosService.Buscar(PrestamoId);
+        if (Prestamo != null)
+        {
+            ListaPrestamosDetalles = Prestamo.PrestamosDetalle?.ToList() ?? new List<PrestamosDetalle>();
+        }
         ListaDeudores = await deudoresService.Listar(d => d.DeudorId > 0);
 
     }
 
     public async Task Modificar()
     {
+        Prestamo.PrestamosDetalle = ListaPrestamosDetalles.ToList();
+
         var creado = await prestamosService.Guardar(Prestamo);
 
         if (creado)
         {
-            toastService.ShowSuccess( "Se ha modificado correctamente");
+            navigationManager.NavigateTo("/Prestamo/Index");
         }
-        else
-        {
-            toastService.ShowError("No se ha podido modificar correctamente");
-        }
+        
     }
 
     private async Task Eliminar(){
@@ -90,12 +101,25 @@
 
         if (eliminado)
         {
-            toastService.ShowSuccess("Se ha eliminado correctamente");
+            GuardarExito = "Se ha eliminado correctamente";
             navigationManager.NavigateTo("/Prestamo/Index");
         }
         else
         {
-            toastService.ShowError("No se ha podido eliminar correctamente");
+            ErrorNombre = "No se ha podido eliminar correctamente";
         }
+    }
+    private async Task HandleCuotasCalculated(List<PrestamosDetalle> detalles)
+    {
+        if (detalles == null || detalles.Count == 0)
+            return;
+
+        ListaPrestamosDetalles.Clear();
+        Prestamo.PrestamosDetalle.Clear();
+        ListaPrestamosDetalles.AddRange(detalles);
+        Prestamo.PrestamosDetalle = ListaPrestamosDetalles.ToList();
+        StateHasChanged();
+
+        await Task.CompletedTask;
     }
 }

@@ -1,0 +1,132 @@
+﻿@using Microsoft.EntityFrameworkCore.Query.Internal
+
+<div class="border border-success p-3 mt-3">
+
+    <h5>Detalles del Prestamo</h5>
+
+    <div class="col-auto input-group align-items-center">
+
+        <label class="col-form-label input-group-text">Cantidad de cuotas</label>
+
+        <InputNumber class="form-control" id="quantity-input" @bind-Value="CuotasNo" style="width: 120px;"></InputNumber>
+        <button type="button" class="btn btn-primary bi bi-plus" @onclick="Calcular">Calcular</button>
+
+    </div>
+
+    <hr />
+
+    <table class="table table-light">
+
+        <thead class="table table-striped">
+            <tr class="text-center">
+                <th>Cuota</th>
+                <th>Fecha de pago</th>
+                <th>Monto</th>
+                <th>Remover</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+            @foreach (var cuota in cuotas)
+            {
+                <tr>
+                    <td>@cuota.CuotaNo</td>
+                    <td>@cuota.Fecha.ToShortDateString()</td>
+                    <td>@cuota.Valor.ToString("N2")</td>
+                    <td>
+                        <button type="button" class="btn btn-outline-danger bi bi-trash"
+                        @onclick="() => RemoverDetalle(cuota)"></button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+
+    </table>
+
+    <hr />
+
+</div>
+
+@code {
+    public Prestamos Prestamo { get; set; } = new Prestamos();
+    public PrestamosDetalle DetalleSeleccionado { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<List<PrestamosDetalle>> OnCuotasCalculated { get; set; } // EventCallback to send the list of cuotas
+
+    [Parameter]
+    public double Valor { get; set; }
+
+    [Parameter]
+    public DateTime Fecha { get; set; }
+
+    [Parameter]
+    public List<PrestamosDetalle> CuotasIniciales { get; set; } = new();
+
+    public List<PrestamosDetalle> cuotas { get; set; } = new List<PrestamosDetalle>();
+
+    public int CuotasNo { get; set; }
+
+    async Task Calcular()
+    {
+        // Asegurarse de que el número de cuotas es mayor a 0
+        if (CuotasNo <= 0) return;
+        
+
+        // Limpiar cuotas previas solo si el número de cuotas ha cambiado
+        if (cuotas.Count != CuotasNo)
+        {
+            cuotas.Clear();  // Limpiar la lista local
+            Prestamo.PrestamosDetalle.Clear();  // Limpiar las cuotas del préstamo
+
+            DateTime fechaInicial = DateTime.Today;
+            double montoPorCuota = Valor / CuotasNo;
+
+            for (int i = 1; i <= CuotasNo; i++)
+            {
+                var cuota = new PrestamosDetalle
+                    {
+                        CuotaNo = i,
+                        Fecha = fechaInicial.AddMonths(i),
+                        Valor = montoPorCuota,
+                        PrestamoId = Prestamo.PrestamoId // Asegurarse de que la cuota esté vinculada al préstamo
+                    };
+
+                // Añadir la cuota tanto a la lista local como a la lista del préstamo
+                cuotas.Add(cuota);
+                Prestamo.PrestamosDetalle.Add(cuota);
+            }
+
+            // Invocar el evento para que el componente padre reciba las cuotas
+            await OnCuotasCalculated.InvokeAsync(cuotas);
+        }
+    }
+
+    public void RemoverDetalle(PrestamosDetalle cuota)
+    {
+        cuotas.Remove(cuota);
+
+        // Eliminar la cuota de Prestamo.PrestamosDetalle
+        Prestamo.PrestamosDetalle.Remove(cuota);
+
+        if (DetalleSeleccionado == cuota)
+        {
+            DetalleSeleccionado = null;  // Limpiar la selección si es la cuota seleccionada
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (CuotasIniciales != null && CuotasIniciales.Any())
+        {
+            cuotas = new List<PrestamosDetalle>(CuotasIniciales);
+            CuotasNo = cuotas.Count;
+        }
+        else if (Prestamo.PrestamosDetalle != null && Prestamo.PrestamosDetalle.Any())
+        {
+            cuotas = new List<PrestamosDetalle>(Prestamo.PrestamosDetalle);
+            CuotasNo = cuotas.Count;
+        }
+    }
+}
