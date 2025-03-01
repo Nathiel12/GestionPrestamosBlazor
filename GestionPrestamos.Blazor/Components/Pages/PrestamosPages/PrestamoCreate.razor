@@ -9,8 +9,7 @@
 <PageTitle>Create</PageTitle>
 <EditForm Model="Prestamo" OnValidSubmit="Guardar">
     <DataAnnotationsValidator />
-    <label style="color:red;" hidden="@string.IsNullOrEmpty(ErrorNombre)">@ErrorNombre</label>
-    <label style="color:green;" hidden="@string.IsNullOrEmpty(GuardarExito)">@GuardarExito</label>
+    
 
     <div class="container">
         <div class="card shadow-lg">
@@ -19,7 +18,7 @@
             </div>
 
             <div class="card-body ">
-
+    
                 @*Deudor*@
                 <div class="mb-3">
                     <label class="form-label"><strong>Deudor</strong></label>
@@ -32,25 +31,18 @@
                     </InputSelect>
                     <ValidationMessage For="(() => Prestamo.DeudorId)" />
                 </div>
-
                 @*Concepto*@
                 <div class="mb-3">
                     <label class="form-label"><strong>Concepto</strong></label>
                     <InputText class="form-control" @bind-Value="Prestamo.Concepto"></InputText>
                     <ValidationMessage For="(() => Prestamo.Concepto)" />
                 </div>
-
                 @*Monto*@
                 <div class="mb-3">
                     <label class="form-label"><strong>Monto</strong></label>
                     <InputNumber class="form-control" @bind-Value="Prestamo.Monto"></InputNumber>
                     <ValidationMessage For="(() => Prestamo.Monto)" />
                 </div>
-
-                @* Detalles del Prestamo *@
-
-                <CuotaPicker Valor="Prestamo.Monto" OnCuotasCalculated="HandleCuotasCalculated" />
-
             </div>
 
             @*footer*@
@@ -58,7 +50,6 @@
                 <a href="/Prestamo/Index" class="btn btn-secondary"> <span class="bi bi-arrow-left"></span> Volver</a>
                 <button type="submit" class="btn btn-primary bi bi-floppy"> Guardar</button>
             </div>
-
         </div>
     </div>
 </EditForm>
@@ -67,20 +58,11 @@
 @code {
     public Prestamos Prestamo { get; set; } = new Prestamos();
     public string Mensaje { get; set; } = string.Empty;
-    public PrestamosDetalle DetalleSeleccionado { get; set; } = new();
     public List<Deudores> ListaDeudores { get; set; } = new List<Deudores>();
-    private string ErrorNombre { get; set; } = string.Empty;
-    private string GuardarExito { get; set; } = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
         ListaDeudores = await deudoresService.Listar(d => d.DeudorId > 0);
-    }
-
-    public void RemoverDetalle(PrestamosDetalle detalle)
-    {
-        Prestamo.PrestamosDetalle.Remove(detalle);
-        DetalleSeleccionado = detalle;
     }
 
     public async Task Guardar()
@@ -89,25 +71,12 @@
 
         if (creado)
         {
-            GuardarExito = "Prestamo Guardado Correctamente";
+            toastService.ShowSuccess("Cobro Guardado Correctamente");
             navigationManager.NavigateTo("/Prestamo/Index");
         }
         else
         {
-            ErrorNombre = "No se pudo guardar correctamente";
+            toastService.ShowError("No se pudo guardar correctamente");
         }
     }
-
-    private async Task HandleCuotasCalculated(List<PrestamosDetalle> cuotasGeneradas)
-    {
-        foreach (var cuota in cuotasGeneradas)
-        {
-            Prestamo.PrestamosDetalle.Add(cuota);
-        }
-
-        Prestamo.Monto = Prestamo.PrestamosDetalle.Sum(d => d.Valor);
-    }
-
-
-
 }
