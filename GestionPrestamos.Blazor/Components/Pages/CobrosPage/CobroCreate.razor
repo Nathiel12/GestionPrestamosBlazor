@@ -8,6 +8,8 @@
 
 <PageTitle>Crear Cobros</PageTitle>
 <EditForm Model="Cobro" OnValidSubmit="Guardar">
+    <label style="color:red;" hidden="@string.IsNullOrEmpty(ErrorNombre)">@ErrorNombre</label>
+    <label style="color:green;" hidden="@string.IsNullOrEmpty(GuardarExito)">@GuardarExito</label>
     <DataAnnotationsValidator />
 
     <div class="container">
@@ -43,7 +45,7 @@
                             }
                         </InputSelect>
                         <button type="button" class="btn btn-outline-success bi bi-arrow-clockwise"
-                                @onclick="BuscarPrestamosPendientes">
+                        @onclick="BuscarPrestamosPendientes">
                             Buscar
                         </button>
 
@@ -57,9 +59,9 @@
                     <h5>Detalles del Cobro</h5>
 
                     <PrestamoPicker Prestamos="ListaPrestamos"
-                                    PrestamoId="DetalleSeleccionado.PrestamoId"
-                                    Valor="DetalleSeleccionado.ValorCobrado"
-                                    OnPrestamoSelected="HandlePrestamoSelected" />
+                    PrestamoId="DetalleSeleccionado.PrestamoId"
+                    Valor="DetalleSeleccionado.ValorCobrado"
+                    OnPrestamoSelected="HandlePrestamoSelected" />
                     <hr />
                     <table class="table table-light">
                         <thead class="table table-striped">
@@ -77,7 +79,7 @@
                                     <td>@detalle.ValorCobrado</td>
                                     <td>
                                         <button type="button" class="btn btn-outline-danger bi bi-trash"
-                                                @onclick="() => RemoverDetalle(detalle)"></button>
+                                        @onclick="() => RemoverDetalle(detalle)"></button>
                                     </td>
                                 </tr>
                             }
@@ -113,6 +115,8 @@
     public CobrosDetalle DetalleSeleccionado { get; set; } = new();
     public List<Deudores> ListaDeudores { get; set; } = [];
     public List<Prestamos> ListaPrestamos { get; set; } = [];
+    private string ErrorNombre { get; set; } = string.Empty;
+    private string GuardarExito { get; set; } = string.Empty;
 
     public double ValorAplicar { get; set; }
 
@@ -130,11 +134,17 @@
 
     private async Task HandlePrestamoSelected((Prestamos prestamo, double valor) selection)
     {
+        if (selection.valor > selection.prestamo.Balance)
+        {
+            ErrorNombre = ($"No puedes cobrar más del saldo disponible ({selection.prestamo.Balance}) para el préstamo {selection.prestamo.PrestamoId}.");
+            return;
+        }
+
         var detalle = new CobrosDetalle
-            {
-                PrestamoId = selection.prestamo.PrestamoId,
-                ValorCobrado = selection.valor
-            };
+        {
+            PrestamoId = selection.prestamo.PrestamoId,
+            ValorCobrado = selection.valor
+        };
 
         Cobro.CobrosDetalle.Add(detalle);
         Cobro.Monto = Cobro.CobrosDetalle.Sum(d => d.ValorCobrado);
@@ -149,19 +159,18 @@
 
         if (paso)
         {
-            toastService.ShowSuccess("Cobro Guardado Correctamente");
             navigationManager.NavigateTo("/Cobro/Index");
         }
         else
         {
-            toastService.ShowError("No se pudo guardar correctamente");
+            ErrorNombre = "No se pudo guardar correctamente";
         }
     }
 
     public void RemoverDetalle(CobrosDetalle detalle)
     {
         Cobro.CobrosDetalle.Remove(detalle);
-        DetalleSeleccionado = detalle;
+        Cobro.Monto = Cobro.CobrosDetalle.Sum(d => d.ValorCobrado);
     }
 
     private async Task AplicarValor()
@@ -169,34 +178,22 @@
         Cobro.CobrosDetalle.Clear();
         if (ValorAplicar > 0)
         {
-
-            var prestamosPendientes = await prestamosService
-                .GetPrestamosPendientes(Cobro.DeudorId);
+            var prestamosPendientes = await prestamosService.GetPrestamosPendientes(Cobro.DeudorId);
             foreach (var prestamo in prestamosPendientes)
             {
-                double valorCobrado = 0;
-                if (prestamo.Balance < ValorAplicar)
-                    valorCobrado = prestamo.Balance;
-                else
-                    valorCobrado = ValorAplicar;
-
+                double valorCobrado = Math.Min(ValorAplicar, prestamo.Balance); 
                 ValorAplicar -= valorCobrado;
 
-                Cobro.CobrosDetalle.Add(
-                    new CobrosDetalle()
-                        {
-                            PrestamoId = prestamo.PrestamoId,
-                            ValorCobrado = valorCobrado
-                        }
-                );
+                if (valorCobrado > 0)
+                {
+                    Cobro.CobrosDetalle.Add(new CobrosDetalle
+                    {
+                        PrestamoId = prestamo.PrestamoId,
+                        ValorCobrado = valorCobrado
+                    });
+                }
             }
-
-
         }
-
-
-
     }
-
 }
 
