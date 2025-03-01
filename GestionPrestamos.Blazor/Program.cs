@@ -1,7 +1,16 @@
+using Blazored.Toast;
 using GestionPrestamos.Components;
 using GestionPrestamos.Context;
 using GestionPrestamos.Services;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
+
+var culture = new CultureInfo("es-US");
+CultureInfo.DefaultThreadCurrentCulture = culture;
+CultureInfo.DefaultThreadCurrentUICulture = culture;
+
+CultureInfo.CurrentCulture = culture;
+CultureInfo.CurrentUICulture = culture;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +30,7 @@ builder.Services.AddScoped<CobrosService>();
 
 // Inyeccion del servicio de Bootstrap
 builder.Services.AddBlazorBootstrap();
+builder.Services.AddBlazoredToast();
 
 var app = builder.Build();
 
